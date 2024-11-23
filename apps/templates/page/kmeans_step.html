@@ -11,7 +11,7 @@
 <table class="table table-hover table-bordered" width="100%">
     <thead>
         <tr>
-            <th>No</th>
+            <th></th>
             <th class="text-center" colspan="{{step.count}}">Data</th>
         </tr>
     </thead>
@@ -35,16 +35,16 @@
 <table class="table table-hover table-bordered" width="100%">
     <thead>
         <tr>
-            <th>No</th>
+            <th></th>
             <th class="text-center" colspan="{{step.count}}">Data</th>
         </tr>
     </thead>
     <tbody class="text-center">
-        {% for row in step.euclidean_distances %}
+        {% for row in step.combined_data %}
         <tr>
-            <td>{{ forloop.counter }}</td>
+            <td>{{ row.No }}</td>
             
-            {% for value in row %}
+            {% for value in row.euclidean_distances %}
             <td>{{ value }}</td>
             {% endfor %}
 
@@ -58,16 +58,15 @@
 <table class="table table-hover table-bordered" width="100%">
     <thead>
         <tr>
-            <th>No</th>
-            <th class="text-center">Data</th>
+            <th></th>
+            <th class="text-center">Kluster</th>
         </tr>
     </thead>
     <tbody class="text-center">
-        {% for row in step.clusters %}
+        {% for row in step.combined_data %}
         <tr>
-            <td>{{ forloop.counter }}</td>
-            
-            <td>{{ row }}</td>
+            <td>{{ row.No }}</td>
+            <td>{{ row.clusters }}</td>
         </tr>
         {% endfor %}
     </tbody>

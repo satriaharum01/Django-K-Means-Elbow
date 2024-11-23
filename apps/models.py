@@ -56,13 +56,13 @@ class m_response(models.Model):
 class m_centeroid(models.Model):
     
     TYPES = [
-        ('Rata-rata nilai', 'Rata-rata nilai'),
-        ('Random Centeroid', 'Random Centeroid'),
+        ('average', 'Rata-rata nilai'),
+        ('random', 'Random Centeroid'),
     ]
     
-    centeroid_type = models.CharField(max_length=20, choices=TYPES, default='Random Centeroid')
-    jumlah_cluster = models.IntegerField(max_length=3)  
-    max_perulangan = models.IntegerField(max_length=3)  
+    centeroid_type = models.CharField(max_length=20, choices=TYPES, default='random')
+    jumlah_cluster = models.IntegerField()  
+    max_perulangan = models.IntegerField()  
     
     def __str__(self):
         return f"{self.jumlah_cluster}({self.get_centeroid_type_display()})"

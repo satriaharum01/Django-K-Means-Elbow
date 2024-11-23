@@ -9,6 +9,8 @@ from django.shortcuts import render
 from django.conf import settings
 from openpyxl import load_workbook
 from django.http import JsonResponse
+from sklearn.datasets import make_blobs
+from django.conf import settings
 
 
 # Decorators
@@ -20,8 +22,10 @@ from .forms import ExcelUploadForm, CenteroidForm
 # Models Import
 from django.contrib.auth.models import User
 
-# Create your views here.
+# Set the path to save the plot inside the static folder
+elbow_dir = os.path.join(settings.BASE_DIR, 'static', 'elbow')
 
+# Create your views here.
 
 @admin_required
 def index(request):
@@ -55,6 +59,42 @@ def upload_excel(request):
         # Kembalikan data JSON
         return JsonResponse({"data": data})
 
+# Inisialisasi centroid secara random
+def initialize_centroids_random(X, n_clusters):
+    random_indices = np.random.choice(range(X.shape[0]), size=n_clusters, replace=False)
+    centroids = X[random_indices]
+    return centroids
+
+# Inisialisasi centroid berdasarkan average
+
+def initialize_centroids_average(X, n_clusters):
+    # Tentukan jumlah data dan tentukan berapa banyak data per cluster
+    num_data = X.shape[0]
+    data_per_cluster = num_data // n_clusters
+
+    # Inisialisasi centroid berdasarkan pembagian data
+    centroids = []
+    for i in range(n_clusters):
+        # Tentukan indeks mulai dan indeks akhir untuk setiap cluster
+        start_index = i * data_per_cluster
+        end_index = (i + 1) * data_per_cluster if i != n_clusters - 1 else num_data
+
+        # Ambil subset data untuk cluster ini
+        cluster_data = X[start_index:end_index]
+
+        # Hitung rata-rata (centroid) untuk subset data ini
+        centroid = np.mean(cluster_data, axis=0)
+        centroids.append(centroid)
+
+    # Mengonversi list centroid ke array numpy
+    centroids = np.array(centroids)
+    return centroids
+
+def initialize_centroids_average_2(X, n_clusters):
+    avg = np.mean(X, axis=0)  # Rata-rata tiap kolom
+    perturbations = np.linspace(-1, 1, n_clusters)  # Variasi untuk memisahkan centroid
+    centroids = np.array([avg + pert * avg for pert in perturbations])
+    return centroids
 
 def euclidean_distance(point1, point2):
     return np.sqrt(np.sum((point1 - point2) ** 2))
@@ -64,43 +104,74 @@ def kmeans_step_by_step(request):
     context = {"form": ExcelUploadForm()}
     
     if request.method == "POST":
+        try:    
+            file = request.FILES["file"]
+        except Exception as e:
+            context['error'] = "File Excel tidak valid atau kosong."
+            return render(request, "page/kmeans_step.html", context)
+        
         file = request.FILES["file"]
-       
+        
         # Membuat DataFrame
         df = pd.read_excel(file)
+        if df is None:
+            context['error'] = "File Excel tidak valid atau kosong."
+            return render(request, "page/kmeans_step.html", context)
         # Pastikan dataset memiliki kolom yang sesuai
-        required_columns = ['Data 1', 'Data 2', 'Data 3']
+        required_columns = ['No','X', 'Y']
         
         if not all(col in df.columns for col in required_columns):
             context['error'] = f"Dataset harus memiliki kolom: {', '.join(required_columns)}"
             return render(request, "page/kmeans_step.html", context)
 
         # Inisialisasi variabel untuk menyimpan langkah
-        steps = []
+        iteration_steps = []
 
         # Langkah 1: Inisialisasi centroid
         # Pilih kolom untuk clustering
-        X = df[['Data 1', 'Data 2', 'Data 3']].to_numpy()
-
+        X = df[['X', 'Y']].to_numpy()
+        
+        try:    
+            k = int(request.POST.get('clusters', 10))  # Jumlah kluster
+            n_iter = int(request.POST.get('iterations', 10)) # Jumlah Iterasi
+            init_method = request.POST.get('init_method') # Metode Insiasi
+        except Exception as e:
+            context['error'] = "Silahkan Isi Form Inisiasi Cluster"
+            return render(request, "page/kmeans_step.html", context)
         # Manual K-Means untuk mencatat hasil per iterasi
-        k = 3  # Jumlah kluster
-        n_iter = 3 # Jumlah Iterasi
-        np.random.seed(0)
-        centroids = X[np.random.choice(X.shape[0], k, replace=False)]  # Inisialisasi centroid
-        iteration_steps = []
-
+        k = int(request.POST.get('clusters', 10))  # Jumlah kluster
+        n_iter = int(request.POST.get('iterations', 10)) # Jumlah Iterasi
+        init_method = request.POST.get('init_method') # Metode Insiasi
+        
+        if init_method == 'random':
+            centroids = initialize_centroids_random(X, k)
+        elif init_method == 'average':
+            centroids = initialize_centroids_average(X, k)
+        else:
+            context['error'] = "init_method must be 'random' or 'average'"
+            return render(request, "page/kmeans_step.html", context)
+        
+        uploadedData = df.to_dict('records')
         for iteration in range(n_iter):
             # Hitung jarak Euclidean
-            distances = np.linalg.norm(X[:, None] - centroids[None, :, :], axis=2)
+            distances = np.round(np.linalg.norm(X[:, None] - centroids[None, :, :], axis=2), 4)
             clusters = np.argmin(distances, axis=1)
 
             # Catat langkah per iterasi
+            combined_data = []
+            for data, cl, dst in zip(uploadedData, clusters, distances):
+                combined_entry = data.copy()
+                combined_entry['clusters'] = cl +1
+                combined_entry['euclidean_distances'] = dst
+                combined_data.append(combined_entry)
+                
             step_data = {
                 "iteration": iteration + 1,
                 "count": k,
-                "centroids": centroids.tolist(),
-                "clusters": clusters.tolist(),
-                "euclidean_distances": distances.tolist()
+                "centroids": np.round(centroids,2).tolist(),
+                "clusters": (clusters+1).tolist(),
+                "euclidean_distances": distances.tolist(),
+                "combined_data": combined_data
             }
             iteration_steps.append(step_data)
 
@@ -116,12 +187,13 @@ def kmeans_step_by_step(request):
         df['Euclidean Distance'] = [distances[i, clusters[i]] for i in range(len(X))]
         
         # Menampilkan hasil ke console
-        print("\n=== Hasil K-Means Clustering ===")
-        for step in iteration_steps:
-            print(f"\n--- Iterasi {step['iteration']} ---")
-            print("Centroids:", step['centroids'])
-            print("Clusters:", step['clusters'])
-            print("Euclidean Distances:", step['euclidean_distances'])
+        #print("\n=== Hasil K-Means Clustering ===")
+        #for step in iteration_steps:
+        #    print(f"\n--- Iterasi {step['iteration']} ---")
+        #    print("Centroids:", step['centroids'])
+        #    print("Clusters:", step['clusters'])
+        #    print("Euclidean Distances:", step['euclidean_distances'])
+        #    print("Euclidean Distances:", step['combined_data'])
         # Kirim data langkah-langkah ke template
         return render(request, "page/kmeans_step.html", {"steps": iteration_steps})
 
@@ -210,3 +282,69 @@ def kmeans_step_by_step_2(request):
 
         # Kirim data langkah-langkah ke template
         return render(request, "page/kmeans_step.html", {"steps": steps})
+
+def elbow_plot(request):
+    
+    context = {"form": ExcelUploadForm()}
+    
+    if request.method == "POST":
+        try:    
+            file = request.FILES["file"]
+        except Exception as e:
+            context['error'] = "File Excel tidak valid atau kosong."
+            return render(request, "page/elbow_draw.html", context)
+        
+        file = request.FILES["file"]
+        
+        # Membuat DataFrame
+        df = pd.read_excel(file)
+        if df is None:
+            context['error'] = "File Excel tidak valid atau kosong."
+            return render(request, "page/elbow_draw.html", context)
+        # Pastikan dataset memiliki kolom yang sesuai
+        required_columns = ['No','X', 'Y']
+        
+        if not all(col in df.columns for col in required_columns):
+            context['error'] = f"Dataset harus memiliki kolom: {', '.join(required_columns)}"
+            return render(request, "page/elbow_draw.html", context)
+
+        X = df[['X', 'Y']].to_numpy()
+    
+        # Mengambil parameter dari form
+        try:
+            start_cluster = int(request.POST.get('start_cluster', 1))  # Start cluster
+            end_cluster = int(request.POST.get('end_cluster', 10))  # End cluster
+            max_iter = int(request.POST.get('max_iter', 10))  # Max Iterations
+        except Exception as e:
+            context['error'] = "Silahkan Isi Form dengan Benar"
+            return render(request, "page/elbow_draw.html", context)
+        # Inisialisasi list untuk menyimpan nilai inertia
+        inertia_values = []
+
+        # Lakukan K-Means untuk berbagai jumlah cluster (start_cluster hingga end_cluster)
+        for k in range(start_cluster, end_cluster + 1):
+            kmeans = KMeans(n_clusters=k, max_iter=max_iter, random_state=42)
+            kmeans.fit(X)
+            inertia_values.append(kmeans.inertia_)  # Menyimpan nilai inertia
+
+    # Buat plot Elbow
+    plt.figure()
+    plt.plot(range(start_cluster, end_cluster + 1), inertia_values, marker='o')
+    plt.title('Elbow Method For Optimal k')
+    plt.xlabel('Number of Clusters (k)')
+    plt.ylabel('WCSS')
+
+    plot_filename = "elbow_plot.png"
+    # Make sure the directory exists
+    os.makedirs(elbow_dir, exist_ok=True)
+
+    # Path to save the plot
+    plot_filepath = os.path.join(elbow_dir, plot_filename)
+    
+    print(plot_filepath)
+    plt.savefig(plot_filepath, format='png')
+    plt.close() 
+
+    # Kembalikan path relatif untuk digunakan di template
+    plot_url = 'elbow/elbow_plot.png'
+    return render(request, "page/elbow_draw.html", {"plot_url": plot_url})
