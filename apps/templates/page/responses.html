@@ -1,0 +1,185 @@
+{% extends "layouts/master.html" %} {% block title %} {{title}} {% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %} {% block content %}
+<!-- awal isi halaman -->
+<div class="app-title">
+  <div>
+    <h1><i class="bi bi-table"></i> {{title}}</h1>
+  </div>
+  <ul class="app-breadcrumb breadcrumb side">
+    <li class="breadcrumb-item"><i class="bi bi-house-door fs-6"></i></li>
+    <li class="breadcrumb-item active"><a href="#">{{title}}</a></li>
+  </ul>
+</div>
+<div class="row">
+  <div class="col-md-12">
+    <div class="tile">
+      <div class="border-bottom d-flex justify-start-end mb-3 pb-2 tile-body">
+        <h2><i class="bi bi-clipboard-data"></i> Data Kuesioner {{user.first_name}} {{user.last_name}}</h2>
+      </div>
+      <div class="tile-body">
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered" id="data-width" width="100%">
+            <thead>
+              <tr>
+                <th style="text-align: center" width="10%">No</th>
+                <th>Kuisoner</th>
+                <th>Type</th>
+                <th>Jawaban</th>
+                <th style="text-align: center" width="20%">Aksi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- akhir isi halaman -->
+{% endblock content %} 
+{% block modal %}
+
+<!-- ============ MODAL DATA =============== -->
+<div class="modal fade" id="compose" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header justify-content-center">
+        <center>
+          <b>
+            <h4 class="modal-title" id="exampleModalLabel">Tambah Data</h4>
+          </b>
+        </center>
+      </div>
+
+      <!-- meload package untuk merender form field -->
+      {% load widget_tweaks %}
+      <form action="#" method="POST" id="compose-form" class="form-horizontal" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          {{ form.as_div|safe }} 
+        </div>
+        <div class="modal-footer">
+          <button type="reset" class="btn btn-danger" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary btn-simpan">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!--- END MODAL DATA --->
+{% endblock modal %}
+<!-- Specific Page JS goes HERE  -->
+{% block js %}
+
+<script>
+  $(function () {
+    kosongkan();
+    table = $("#data-width").DataTable({
+      searching: false,
+      ajax: '{% url "siswa/kuesioner/json" %}',
+      columns: [
+        {
+          data: "DT_RowIndex",
+          name: "DT_RowIndex",
+          className: "text-center",
+        },
+        {
+          data: "question_text",
+          className: "text-justify",
+        },
+        {
+          data: "question_type",
+          className: "text-center",
+        },
+        {
+          data: "answer",
+          className: "text-center",
+        },
+        {
+          data: "id",
+          className: "text-center",
+          orderable: false,
+          searchable: false,
+          render: function (data, type, row) {
+            return (
+              '<button type="button" class="btn btn-success btn-edit" data-id="' +data +'"><i class="fa fa-edit"></i> </button>'
+            );
+          },
+        },
+      ],
+    });
+  });
+
+  function find_data(id)
+  {
+    
+    $.ajax({
+      url: "find/" + id,
+      type: "GET",
+      cache: false,
+      dataType: "json",
+      success: function (dataResult) {
+        var resultData = dataResult.data;
+        $.each(resultData, function (index, row) {
+          set_value(row);
+        });
+      },
+    });
+  }
+
+  //Button Trigger
+  $("body").on("click", ".btn-edit", function () {
+    var id = jQuery(this).attr("data-id");
+    find_data(id);
+    jQuery("#compose-form").attr("action", '{% url "siswa/kuesioner" %}isi/' + id);
+    jQuery("#compose .modal-title").html("Isi Kuesioner");
+    jQuery("#compose").modal("toggle");
+  });
+
+  $("body").on("click", ".btn-simpan", function () {
+    if(validate())
+    {
+    Swal.fire({
+      
+     title: "Data Disimpan!",
+     text: "Data Telah disimpan didatabase.",
+     type: "success",
+     timer: 1000
+     }).then((result) => {
+        if (result.dismiss) {
+          document.getElementById("compose-form").submit();
+        }else{
+          document.getElementById("compose-form").submit();
+        }
+      });
+    }
+  });
+
+  function set_value(value) {
+    let form = document.forms["compose-form"].getElementsByClassName("form-control");
+    $.each(form, function (index, row) {
+      jQuery("#compose-form "+row.tagName+"[name="+row.name+"]").val(value[row.name]);
+    })
+  }
+  function validate()
+  {
+    let form = document.forms["compose-form"].getElementsByClassName("form-control");
+    $.each(form, function (index, row) {
+      let val = jQuery("#compose-form "+row.tagName+"[name="+row.name+"]").val();
+      if(val === null || val === "")
+      {
+        alert('Cek Form!');
+        return false;
+      }
+    })
+    return true;
+  }
+  function kosongkan() {
+    $('#id_kuesioner').children().each(function() {
+      $(this).removeClass().addClass("d-none");
+    })
+  }
+</script>
+{% endblock js %}

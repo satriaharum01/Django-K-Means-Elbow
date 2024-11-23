@@ -1,0 +1,76 @@
+{% if error %}
+<div class="tile-title" style="color: red;">{{ error }}</div>
+{% endif %}
+
+{% for step in steps %}
+{% if  forloop.counter == 1 %}
+<h3 class="tile-title">Iterasi {{ step.iteration }}: Penentuan Centeroid</h3>
+{% else %}
+<h3 class="tile-title">Iterasi {{ step.iteration }}: Update Centeroid</h3>
+{% endif %}
+<table class="table table-hover table-bordered" width="100%">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th class="text-center" colspan="{{step.count}}">Data</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for row in step.centroids %}
+        <tr>
+            <td>Centeroid {{ forloop.counter }}</td>
+            
+            {% for value in row %}
+            <td>{{ value }}</td>
+            {% endfor %}
+
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<hr>
+
+<h3 class="tile-title">Iterasi {{ step.iteration }}: Hitung Euclidean Distance</h3>
+
+<table class="table table-hover table-bordered" width="100%">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th class="text-center" colspan="{{step.count}}">Data</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for row in step.euclidean_distances %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            
+            {% for value in row %}
+            <td>{{ value }}</td>
+            {% endfor %}
+
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<hr>
+<h3 class="tile-title">Iterasi {{ step.iteration }}: Hasil Cluster</h3>
+
+<table class="table table-hover table-bordered" width="100%">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th class="text-center">Data</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for row in step.clusters %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            
+            <td>{{ row }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<hr>
+{% endfor %}

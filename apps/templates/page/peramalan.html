@@ -1,0 +1,182 @@
+{% extends "layouts/master.html" %} {% block title %} Peralaman Regresi Linear
+{% endblock %}
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %} {% block content %}
+<!-- awal isi halaman -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="tile">
+      <h3 class="tile-title"><i>Proses {{title}} Methode</i></h3>
+      <div class="tile-body row mx-3">
+        <div class="border border-5 border-secondary col-lg-3 col-md-3" style="border-right: 0px !important;">
+          <div href="#" class="btn btn-warning col-md-11 mx-2 my-2">{{title}}</div>
+          <ol class="p-3" style="margin-left: 2rem;">
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse1">Masukkan Dataset</a></li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse2">Menentukan Cluster</a></li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse3" id="load-steps">Proses K-Means</a>
+            </li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse4">Optimasi Elbow</a></li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse5">Clustering</a></li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse6">Kesimpulan</a></li>
+          </ol>
+        </div>
+        <div class="border border-5 border-secondary col-lg-9 col-md-9 pt-3" id="accordionExample">
+          <div class="collapse show" id="collapse1" data-bs-parent="#accordionExample">
+            <div class="tile">
+              <h3 class="tile-title">Pilih Data Excel</h3>
+              <a class="tile-title p-0">
+                <h6>Download Contoh format Excel</h6>
+              </a>
+              <form id="upload-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group row">
+                  <div class="col-md-9">
+                    <input type="file" name="file" accept=".xlsx" required class="form-control ">
+
+                  </div>
+                  <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="tile">
+              <h3 class="tile-title">Dataset {{title}}</h3>
+              <div class="tile-body">
+                <div class="table-responsive" id="upload_data">
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapse" id="collapse2" data-bs-parent="#accordionExample">
+            <div class="tile">
+              <h3 class="tile-title">Tentukan Centeroid & Cluster</h3>
+
+              <div class="tile-body">
+                <form id="centeroid" method="post" enctype="multipart/form-data">
+
+                  {% csrf_token %}
+
+                  {{ centeroidForm.as_div|safe }}
+                  <div class="tile-footer text-end">
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="collapse" id="collapse3" data-bs-parent="#accordionExample">
+            <div class="tile">
+              <h3 class="tile-title">Tahapan Proses {{title}}</h3>
+              <div id="result-step"></div>
+            </div>
+          </div>
+
+          <div class="collapse" id="collapse4" data-bs-parent="#accordionExample">
+            <div class="card card-body">
+              4
+            </div>
+          </div>
+
+          <div class="collapse" id="collapse5" data-bs-parent="#accordionExample">
+            <div class="card card-body">
+              Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. Nihil anim
+              keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident.
+            </div>
+          </div>
+
+          <div class="collapse" id="collapse6" data-bs-parent="#accordionExample">
+            <div class="card card-body">
+              Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. Nihil anim
+              keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- akhir isi halaman -->
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block js %}
+
+<script>
+  document.getElementById('upload-form').addEventListener('submit', async function (event) {
+    event.preventDefault(); // Mencegah reload halaman
+
+    const formData = new FormData(this); // Ambil data form
+
+    // Kirim request ke server
+    const response = await fetch('{% url "upload_excel" %}', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      const result = await response.json(); // Parse response JSON
+      renderData(result.data); // Render data ke halaman
+    } else {
+      alert('Gagal mengunggah file!');
+    }
+
+    $.ajax({
+      url: "{% url 'kmeans_steps' %}",
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (data) {
+        $("#result-step").html(data);
+      },
+      error: function (xhr) {
+        console.log("Error: " + xhr.responseJSON.error);
+      },
+    });
+
+  });
+
+  // Fungsi untuk render data ke tabel
+  function renderData(data) {
+    const uploadDataDiv = document.getElementById('upload_data');
+    if (data.length === 0) {
+      uploadDataDiv.innerHTML = '<p>Tidak ada data ditemukan.</p>';
+      return;
+    }
+
+    // Buat tabel
+    let tableHTML = '<table class="table table-hover table-bordered"><thead><tr>';
+
+    // Buat header dari baris pertama data
+    data[0].forEach(header => {
+      tableHTML += `<th>${header}</th>`;
+    });
+
+    tableHTML += '</tr></thead><tbody>';
+
+    // Tambahkan baris data
+    data.slice(1).forEach(row => {
+      tableHTML += '<tr>';
+      row.forEach(cell => {
+        tableHTML += `<td>${cell !== null ? cell : ''}</td>`;
+      });
+      tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+
+    // Render tabel ke div
+    uploadDataDiv.innerHTML = tableHTML;
+  }
+</script>
+<script>
+
+</script>
+{% endblock js %}
