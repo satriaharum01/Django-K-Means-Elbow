@@ -17,7 +17,7 @@
             <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse3" id="load-steps">Proses K-Means</a>
             </li>
             <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse4">Optimasi Elbow</a></li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse5">Clustering</a></li>
+            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse5" id="load-result">Clustering</a></li>
             <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse6" id="load-elbow">Kesimpulan</a></li>
           </ol>
         </div>
@@ -111,10 +111,7 @@
           </div>
 
           <div class="collapse" id="collapse5" data-bs-parent="#accordionExample">
-            <div class="card card-body">
-              Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. Nihil anim
-              keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident.
-            </div>
+            <div id="result-cluster"></div>
           </div>
 
           <div class="collapse" id="collapse6" data-bs-parent="#accordionExample">
@@ -222,12 +219,15 @@
 
     let formData = new FormData();
     formData.append("file", jQuery("#upload-form input[name=file]")[0].files[0]);
+    formData.append("clusters", jQuery("#centeroid input[name=jumlah_cluster]").val());
+    formData.append("iterations", jQuery("#centeroid input[name=max_perulangan]").val());
+    formData.append("init_method", jQuery("#centeroid select[name=centeroid_type]").val());
     formData.append("start_cluster", jQuery("#elbow-method input[name=start_cluster]").val());
     formData.append("end_cluster", jQuery("#elbow-method input[name=end_cluster]").val());
     formData.append("max_iter", jQuery("#elbow-method input[name=max_iter]").val());
 
     $.ajax({
-      url: "{% url 'elbow_plot' %}",
+      url: "{% url 'summary' %}",
       type: "POST",
       headers: {
         "X-CSRFToken": csrfToken, // Tambahkan CSRF Token ke header
@@ -237,6 +237,35 @@
       contentType: false,
       success: function (data) {
         $("#result-elbow").html(data);
+      },
+      error: function (xhr) {
+        console.log("Error: " + xhr.responseJSON.error);
+      },
+    });
+
+  });
+</script>
+<script>
+  $("#load-result").click(function () {
+    const csrfToken = $("meta[name='csrf-token']").attr("content");
+
+    let formData = new FormData();
+    formData.append("file", jQuery("#upload-form input[name=file]")[0].files[0]);
+    formData.append("clusters", jQuery("#centeroid input[name=jumlah_cluster]").val());
+    formData.append("iterations", jQuery("#centeroid input[name=max_perulangan]").val());
+    formData.append("init_method", jQuery("#centeroid select[name=centeroid_type]").val());
+
+    $.ajax({
+      url: "{% url 'clustering_view' %}",
+      type: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken, // Tambahkan CSRF Token ke header
+      },
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (data) {
+        $("#result-cluster").html(data);
       },
       error: function (xhr) {
         console.log("Error: " + xhr.responseJSON.error);

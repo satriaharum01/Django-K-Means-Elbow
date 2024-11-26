@@ -5,6 +5,4 @@ urlpatterns = [
     path('', views.index, name='dashboard'),
     path('pusat/dashboard/', views.index, name='admin/dashboard'),
     path('pusat/dashboard/', views.index, name='pusat/dashboard'),
-    path('guru/dashboard/', views.guru, name='guru/dashboard'),
-    path('siswa/dashboard/', views.siswa, name='siswa/dashboard')
 ]

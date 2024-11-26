@@ -1,0 +1,48 @@
+{% if error %}
+<div class="tile-title" style="color: red;">{{ error }}</div>
+{% endif %}
+
+{% for row in result %}
+<button type="button" class="btn btn-primary pull-right btn-export-image"><i class="fa fa-file-image"></i>
+    Export</button>
+<button type="button" class="btn btn-danger mx-2 pull-right btn-print-Table"><i class="fa fa-file-pdf"></i>
+    Export</button>
+<button type="button" class="btn btn-success pull-right btn-export-excel"><i class="fa fa-file-excel"></i>
+    Export</button>
+<h3 class="tile-title">Iterasi {{ row.iteration }}: Hasil Cluster</h3>
+<table class="table table-hover table-bordered" width="100%" id="data-result-cluster">
+    <thead>
+        <tr>
+            <th class="text-center">Data</th>
+            <th class="text-center">Kluster</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for dow in row.combined_data %}
+        <tr>
+            <td>{{ dow.No }}</td>
+            <td>{{ dow.clusters }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<hr>
+
+{% load static %}
+<h3 class="tile-title">Grafik Hasil Cluster</h3>
+<img src="{% static figure %}" alt="Figure" style="width:100%;">
+{% endfor %}
+<script>
+    //Excel Table
+    $('.btn-export-excel').on('click', function () {
+        exportTableToExcel('data-result-cluster');
+    })
+    // Print table on button click
+    $('.btn-print-Table').on('click', function () {
+        exportTableToPrint('data-result-cluster');
+    });
+    // Export table to JPG
+    $('.btn-export-image').on('click', function () {
+        exportTableToImage('data-result-cluster');
+    });
+</script>

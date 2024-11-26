@@ -7,7 +7,8 @@ urlpatterns = [
     path('peramalan/', views.index, name='peramalan'),
     path('upload-excel/', views.upload_excel, name='upload_excel'),
     path('kmeans-steps/', views.kmeans_step_by_step, name='kmeans_steps'),
-    path('elbow_plot/', views.elbow_plot, name='elbow_plot'),
+    path('clustering_view/', views.clustering_view, name='clustering_view'),
+    path('summary/', views.summary, name='summary'),
 ]
 
 # Menyajikan file media saat dalam mode pengembangan
