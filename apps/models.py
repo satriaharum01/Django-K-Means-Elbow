@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
     
 class m_data(models.Model):
     id = models.IntegerField(primary_key=True, max_length=11)
-    dataset = models.BinaryField()  # Mediumblob (binary field for storing file content)
+    data_name = models.CharField(max_length=100)
+    dataset = models.CharField(max_length=250)  # Mediumblob (binary field for storing file content)
     c_type = models.CharField(
         max_length=10,
         choices=[('average', 'Average'), ('random', 'Random')],

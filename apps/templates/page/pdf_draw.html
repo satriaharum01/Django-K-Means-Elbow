@@ -1,0 +1,52 @@
+{% if error %}
+<div class="tile-title" style="color: red;">{{ error }}</div>
+{% endif %}
+
+
+{% if elbow %}
+
+<h3 class="tile-title">Clustering Information:</h3>
+<div class="content">
+    <p>Initial Method: {{ init_method }}</p>
+    <p>K: {{ k }}</p>
+    <p>Number of Iterations: {{ n_iter }}</p>
+    <p>Start Cluster: {{ start_cluster }}</p>
+    <p>End Cluster: {{ end_cluster }}</p>
+    <p>Max Iterations: {{ max_iter }}</p>
+</div>
+<hr>
+{% for row in result %}
+<h3 class="tile-title">Iterasi {{ row.iteration }}: Hasil Cluster</h3>
+<table class="table table-hover table-bordered" width="100%" id="data-result-cluster">
+    <thead>
+        <tr>
+            <th class="text-center">Data</th>
+            <th class="text-center">Kluster</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for dow in row.combined_data %}
+        <tr>
+            <td>{{ dow.No }}</td>
+            <td>{{ dow.clusters }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<hr>
+{% endfor %}
+{% load static %}
+
+<h3 class="tile-title">Grafik: Elbow Plot</h3>
+
+<!-- Elbow Plot -->
+<img id="elbow-plot" src="{{ elbow }}" alt="Elbow Plot" style="width:100%; max-width:800px;">
+<hr>
+<h3 class="tile-title">Grafik: Kmeans</h3>
+
+<!-- Kmeans Plot -->
+<img id="kmeans-plot" src="{{ figure }}" alt="Kmeans Plot" style="width:100%; max-width:800px;">
+
+
+
+{% endif %}

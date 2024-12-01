@@ -12,28 +12,42 @@
         <div class="border border-5 border-secondary col-lg-3 col-md-3" style="border-right: 0px !important;">
           <div href="#" class="btn btn-warning col-md-11 mx-2 my-2">{{title}}</div>
           <ol class="p-3" style="margin-left: 2rem;">
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse1">Masukkan Dataset</a></li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse2">Menentukan Cluster</a></li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse3" id="load-steps">Proses K-Means</a>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse1">Masukkan Dataset</a></li>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse2">Menentukan Cluster</a></li>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse3" id="load-steps">Proses K-Means</a>
             </li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse4">Optimasi Elbow</a></li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse5" id="load-result">Clustering</a></li>
-            <li><a href="#" data-bs-toggle="collapse" data-bs-target="#collapse6" id="load-elbow">Kesimpulan</a></li>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse4">Optimasi Elbow</a></li>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse5" id="load-result">Clustering</a></li>
+            <li><a href="#" class="border-0 btn btn-outline-primary" data-bs-toggle="collapse"
+                data-bs-target="#collapse6" id="load-elbow">Kesimpulan</a></li>
           </ol>
         </div>
         <div class="border border-5 border-secondary col-lg-9 col-md-9 pt-3" id="accordionExample">
           <div class="collapse show" id="collapse1" data-bs-parent="#accordionExample">
             <div class="tile">
               <h3 class="tile-title">Pilih Data Excel</h3>
-              <a class="tile-title p-0">
+              {% load static %}
+              <a class="tile-title p-0" href="{% static 'datasetdummy.xlsx' %}">
                 <h6>Download Contoh format Excel</h6>
               </a>
               <form id="upload-form" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
+                <div class="form-group row mb-2">
+                  <div class="col-sm-2 align-self-center">
+                    <label>Keterangan : </label>
+                  </div>
+                  <div class="col-sm-8">
+                    <input type="text" name="name" required class="form-control">
+                  </div>
+                </div>
                 <div class="form-group row">
                   <div class="col-md-9">
                     <input type="file" name="file" accept=".xlsx" required class="form-control ">
-
                   </div>
                   <div class="col-md-3">
                     <button type="submit" class="btn btn-primary">Upload</button>
@@ -69,12 +83,12 @@
             </div>
           </div>
 
-          <div class="collapse" id="collapse3" data-bs-parent="#accordionExample">
+          <div class="collapse h-100" id="collapse3" data-bs-parent="#accordionExample">
             <meta name="csrf-token" content="{{ csrf_token }}">
-            <div class="tile">
-              <h3 class="tile-title">Tahapan Proses {{title}}</h3>
+            <div class="tile h-100">
+              <h3 class="tile-title"><i>Tahapan Proses {{title}}</i></h3>
 
-              <div id="result-step"></div>
+              <div id="result-step" class="h-100"></div>
 
             </div>
           </div>
@@ -110,12 +124,12 @@
             </div>
           </div>
 
-          <div class="collapse" id="collapse5" data-bs-parent="#accordionExample">
-            <div id="result-cluster"></div>
+          <div class="collapse h-100" id="collapse5" data-bs-parent="#accordionExample">
+            <div id="result-cluster" class="h-100"></div>
           </div>
 
-          <div class="collapse" id="collapse6" data-bs-parent="#accordionExample">
-            <div id="result-elbow"></div>
+          <div class="collapse h-100" id="collapse6" data-bs-parent="#accordionExample">
+            <div id="result-elbow" class="h-100"></div>
           </div>
 
         </div>
@@ -203,6 +217,13 @@
       data: formData,
       processData: false,
       contentType: false,
+      beforeSend: function () {
+        // Show loading indicator
+        $("#result-step").html(`<div id="loading" class="h-100 align-content-center" style="text-align:center;">
+    <p>Loading, please wait...</p>
+    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+</div>`);
+      },
       success: function (data) {
         $("#result-step").html(data);
       },
@@ -218,6 +239,7 @@
     const csrfToken = $("meta[name='csrf-token']").attr("content");
 
     let formData = new FormData();
+    formData.append("name", jQuery("#upload-form input[name=name]").val());
     formData.append("file", jQuery("#upload-form input[name=file]")[0].files[0]);
     formData.append("clusters", jQuery("#centeroid input[name=jumlah_cluster]").val());
     formData.append("iterations", jQuery("#centeroid input[name=max_perulangan]").val());
@@ -235,6 +257,13 @@
       data: formData,
       processData: false,
       contentType: false,
+      beforeSend: function () {
+        // Show loading indicator
+        $("#result-elbow").html(`<div id="loading" class="h-100 align-content-center" style="text-align:center;">
+    <p>Loading, please wait...</p>
+    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+</div>`);
+      },
       success: function (data) {
         $("#result-elbow").html(data);
       },
@@ -264,6 +293,13 @@
       data: formData,
       processData: false,
       contentType: false,
+      beforeSend: function () {
+        // Show loading indicator
+        $("#result-cluster").html(`<div id="loading" class="h-100 align-content-center" style="text-align:center;">
+    <p>Loading, please wait...</p>
+    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+</div>`);
+      },
       success: function (data) {
         $("#result-cluster").html(data);
       },

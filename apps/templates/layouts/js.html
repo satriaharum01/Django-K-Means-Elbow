@@ -1,5 +1,17 @@
 <!-- Custom template | don't include it in your project! -->
 
+<!-- Spinner Animation -->
+<style>
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+</style>
 {% load static %}
 <!-- Essential javascripts for application to work-->
 <script src="{% static 'js/jquery-3.7.0.min.js'%}"></script>
@@ -78,75 +90,36 @@
       };
     });
   });
-</script>
-<script>
-  function exportTableToExcel(tableId) {
-    // Get the table element using the provided ID
-    const table = document.getElementById(tableId);
 
-    // Extract the HTML content of the table
-    const html = table.outerHTML;
+  document.addEventListener('DOMContentLoaded', function () {
+    const collapseButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
 
-    // Create a Blob containing the HTML data with Excel MIME type
-    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    collapseButtons.forEach(button => {
+      const targetSelector = button.getAttribute('data-bs-target');
+      const targetElement = document.querySelector(targetSelector);
 
-    // Create a URL for the Blob
-    const url = URL.createObjectURL(blob);
+      targetElement.addEventListener('show.bs.collapse', (event) => {
+        // Jika target tombol sama dengan elemen yang sedang ditampilkan
+        if (targetSelector === `#${event.target.id}`) {
+          button.classList.add('active');
+        }
+      });
 
-    // Create a temporary anchor element for downloading
-    const a = document.createElement("a");
-    a.href = url;
-
-    // Set the desired filename for the downloaded file
-    a.download = "Hasil Cluster.xlsx";
-
-    // Simulate a click on the anchor to trigger download
-    a.click();
-
-    // Release the URL object to free up resources
-    URL.revokeObjectURL(url);
-  }
-
-  function exportTableToImage(tableId) {
-    const table = document.getElementById(tableId);
-    // Use html2canvas to capture the table
-    html2canvas(table).then(canvas => {
-      // Convert canvas to image data
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/jpeg', 1.0); // Convert canvas to JPG
-      link.download = 'hasil_cluster.jpg'; // Set download filename
-      link.click(); // Trigger download
+      targetElement.addEventListener('hide.bs.collapse', (event) => {
+        // Jika target tombol sama dengan elemen yang sedang disembunyikan
+        if (targetSelector === `#${event.target.id}`) {
+          button.classList.remove('active');
+          return false; // Break atau hentikan eksekusi
+        }
+      });
     });
-  }
+  });
+</script>
 
-  function exportTableToPrint(tableId) {
-    var tableContent = document.getElementById(tableId).outerHTML; // Get the table HTML
-    var printWindow = window.open('', '_blank'); // Open a new window
-    printWindow.document.open();
-    printWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Print Table</title>
-                            <style>
-                                table {
-                                    border-collapse: collapse;
-                                    width: 100%;
-                                }
-                                table, th, td {
-                                    border: 1px solid black;
-                                }
-                                th, td {
-                                    padding: 8px;
-                                    text-align: left;
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            ${tableContent} <!-- Add table content -->
-                        </body>
-                    </html>
-                `);
-    printWindow.document.close();
-    printWindow.print(); // Trigger print dialog
+<!-- JavaScript to Hide Loading -->
+<script>
+  function hideLoading(thisId) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById(thisId).style.display = 'block';
   }
 </script>

@@ -1,7 +1,11 @@
 import os
+import base64
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import asyncio
+from asgiref.sync import sync_to_async
+from django.template.loader import render_to_string
 from sklearn.cluster import KMeans
 from django.template import loader
 from django.http import HttpResponse
@@ -11,6 +15,9 @@ from openpyxl import load_workbook
 from django.http import JsonResponse
 from sklearn.datasets import make_blobs
 from django.conf import settings
+from xhtml2pdf import pisa
+from io import BytesIO
+from django.core.files.base import ContentFile
 
 
 # Decorators
@@ -20,15 +27,18 @@ from ..decorators import admin_required, guru_bk_required
 from .forms import ExcelUploadForm, CenteroidForm
 
 # Models Import
+from django.db.models import Max
 from django.contrib.auth.models import User
 from ..models import m_data
 
 # Set the path to save the plot inside the static folder
 elbow_dir = os.path.join(settings.BASE_DIR, "static", "elbow")
 kmeans_dir = os.path.join(settings.BASE_DIR, "static", "kmeans")
+pdf_dir = os.path.join(settings.BASE_DIR, "static", "pdf")
 
 # Create your views here.
-
+# Get the maximum ID
+max_id = m_data.objects.aggregate(Max('id'))['id__max'] or 0
 
 @admin_required
 def index(request):
@@ -269,7 +279,6 @@ def kmeans_step_by_step_2(request):
             }
         )
 
-        print(centroids)
         # Iterasi clustering manual
         for i in range(max_iter):  # Maksimal 3 iterasi untuk demo
 
@@ -322,13 +331,12 @@ def kmeans_step_by_step_2(request):
             )
             # Update model dengan centroid baru
             kmeans.cluster_centers_ = centroids
-            print(centroids)
-
+            
         # Kirim data langkah-langkah ke template
         return render(request, "page/kmeans_step.html", {"steps": steps})
 
 
-def clustering_view(request):
+async def clustering_view(request):
     context = {"form": ExcelUploadForm()}
 
     if request.method == "POST":
@@ -367,6 +375,9 @@ def clustering_view(request):
             init_method = request.POST.get("init_method")  # Metode Insiasi
         except Exception as e:
             context["error"] = "Silahkan Isi Form Inisiasi Cluster"
+            return render(request, "page/kmeans_result.html", context)
+        if k > 10:
+            context["error"] = "Maximum Cluster 10"
             return render(request, "page/kmeans_result.html", context)
         # Manual K-Means untuk mencatat hasil per iterasi
         k = int(request.POST.get("clusters", 10))  # Jumlah kluster
@@ -433,7 +444,7 @@ def clustering_view(request):
         result.append(step_data)
         df["Euclidean Distance"] = [distances[i, clusters[i]] for i in range(len(X))]
         figure = generateKmeansFigur(X, (clusters).tolist(), centroids)
-
+        figure_path = await figure
         # Menampilkan hasil ke console
         # print("\n=== Hasil K-Means Clustering ===")
         # for step in iteration_steps:
@@ -444,14 +455,14 @@ def clustering_view(request):
         #    print("Euclidean Distances:", step['combined_data'])
         # Kirim data langkah-langkah ke template
         return render(
-            request, "page/kmeans_result.html", {"result": result, "figure": figure}
+            request, "page/kmeans_result.html", {"result": result, "figure": figure_path}
         )
 
 
-def generateKmeansFigur(X, labels, centroids):
+async def generateKmeansFigur(X, labels, centroids):
 
     # Warna untuk tiap cluster
-    colors = ["red", "blue", "green", "cyan"]
+    colors = ["red", "green", "blue", "cyan", "purple", "yellow", "black", "orange", "teal", "pink", "indigo"]
     # Plot data points
     for cluster_id in np.unique(labels):
         plt.scatter(
@@ -466,7 +477,7 @@ def generateKmeansFigur(X, labels, centroids):
     plt.scatter(
         centroids[:, 0],
         centroids[:, 1],
-        s=500,  # Ukuran marker centroid
+        s=200,  # Ukuran marker centroid
         color="yellow",
         edgecolor="black",
         label="Centroid",
@@ -479,18 +490,22 @@ def generateKmeansFigur(X, labels, centroids):
     plt.legend()  # Menampilkan legenda
     plt.grid(True)
 
-    figure_filename = "elbow_plot.png"
+    new_id = max_id + 1
+    figure_filename = f"kmeans_plot_{new_id}.png"
+    # Make sure the directory exists
+    os.makedirs(kmeans_dir, exist_ok=True)
     # Path to save the plot
-    figure_path = os.path.join(elbow_dir, figure_filename)
+    figure_path = os.path.join(kmeans_dir, figure_filename)
 
     print(figure_path)
     plt.savefig(figure_path, format="png")
     plt.close()
 
+    figure_path = "kmeans/"+ figure_filename
     return figure_path
 
 
-def genarteElbowPlot(file, start_cluster, end_cluster, max_iter):
+async def genarteElbowPlot(file, start_cluster, end_cluster, max_iter):
 
     context = {"form": ExcelUploadForm()}
 
@@ -528,7 +543,8 @@ def genarteElbowPlot(file, start_cluster, end_cluster, max_iter):
     plt.xlabel("Jumlah Cluster")
     plt.ylabel("WCSS")
 
-    plot_filename = "elbow_plot.png"
+    new_id = max_id + 1
+    plot_filename = f"elbow_plot_{new_id}.png"
     # Make sure the directory exists
     os.makedirs(elbow_dir, exist_ok=True)
 
@@ -538,15 +554,74 @@ def genarteElbowPlot(file, start_cluster, end_cluster, max_iter):
     print(plot_filepath)
     plt.savefig(plot_filepath, format="png")
     plt.close()
-
+    
     # Kembalikan path relatif untuk digunakan di template
-    plot_url = "elbow/elbow_plot.png"
+    plot_url = "elbow/"+ plot_filename
     return plot_url
 
+# Function to convert image to base64
+def image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+    
+async def generatePdf(table_data,name,elbow_file,figure_file,c_type,n_cluster,n_iter,s_elbow,e_elbow,n_elbow_iter):
+     # Convert images to base64
+    figure_base64 = image_to_base64(figure_file)
+    elbow_base64 = image_to_base64(elbow_file)
 
-def save_clustering_data(file, c_type, n_cluster, n_iter, s_elbow, e_elbow, n_elbow_iter):
-    data = m_data(
-        dataset=file.read(),  # Simpan konten file sebagai biner
+    # Create an image tag using the base64 data
+    figure_img_tag = f'data:image/png;base64,{figure_base64}'
+    elbow_img_tag = f'data:image/png;base64,{elbow_base64}'
+    new_id = max_id+1
+    data_for_pdf = {
+           "result": table_data,
+           "init_method": c_type,
+           "k": n_cluster,
+           "n_iter": n_iter,
+           "start_cluster": s_elbow,
+           "end_cluster": e_elbow,
+           "max_iter": n_elbow_iter,
+           "elbow": figure_img_tag,
+           "figure": elbow_img_tag
+    }
+    # Render the HTML content
+    html_content = render_to_string('page/pdf_draw.html', data_for_pdf)
+     # Create a BytesIO buffer to store the PDF
+    buffer = BytesIO()
+    # Create the PDF from the rendered HTML
+    # Use xhtml2pdf to convert HTML to PDF
+    pisa_status = pisa.CreatePDF(html_content, dest=buffer)
+
+    # Check if PDF creation was successful
+    if pisa_status.err:
+        return HttpResponse('Error generating PDF', status=500)
+     # Get the PDF data from the buffer
+    pdf_data = buffer.getvalue()
+    pdf_name = f"{new_id}_hasil_kmeans_{name}.pdf"
+    
+    # Make sure the directory exists
+    os.makedirs(pdf_dir, exist_ok=True)
+    
+    # Save it inside MEDIA_ROOT
+    file_path = os.path.join(pdf_dir, pdf_name)  # Saved under static/pdf/
+    content_file = ContentFile(pdf_data)
+    content_file.name = file_path
+    with open(file_path, 'wb') as pdf_file:
+        pdf_file.write(pdf_data)
+        
+    file_path = "pdf/"+ pdf_name
+    
+    return file_path
+
+@sync_to_async
+def save_clustering_data(name, pdf_file, c_type, n_cluster, n_iter, s_elbow, e_elbow, n_elbow_iter):
+    
+    new_id = max_id+1
+    
+    obj = m_data(
+        id = new_id,
+        data_name = name,
+        dataset=pdf_file,  # Simpan konten file sebagai biner
         c_type=c_type,
         n_cluster=n_cluster,
         n_iter=n_iter,
@@ -554,11 +629,13 @@ def save_clustering_data(file, c_type, n_cluster, n_iter, s_elbow, e_elbow, n_el
         e_elbow=e_elbow,
         n_elbow_iter=n_elbow_iter,
     )
-    data.save()
-    return data
+    obj.save()
+    
+    return obj
 
 
-def summary(request):
+
+async def summary(request):
 
     context = {"form": ExcelUploadForm()}
 
@@ -593,6 +670,7 @@ def summary(request):
         X = df[["X", "Y"]].to_numpy()
 
         try:
+            name = request.POST.get("name") # Nama File
             k = int(request.POST.get("clusters", 10))  # Jumlah kluster
             n_iter = int(request.POST.get("iterations", 10))  # Jumlah Iterasi
             init_method = request.POST.get("init_method")  # Metode Insiasi
@@ -601,6 +679,9 @@ def summary(request):
             max_iter = int(request.POST.get("max_iter", 10))  # Jumlah Iterasi Elbow
         except Exception as e:
             context["error"] = "Silahkan Isi Form Inisiasi Cluster"
+            return render(request, "page/elbow_draw.html", context)
+        if k > 10:
+            context["error"] = "Maximum Cluster 10"
             return render(request, "page/elbow_draw.html", context)
         # Manual K-Means untuk mencatat hasil per iterasi
         k = int(request.POST.get("clusters", 10))  # Jumlah kluster
@@ -666,10 +747,21 @@ def summary(request):
         result.append(step_data)
         figure = generateKmeansFigur(X, (clusters).tolist(), centroids)
         elbow = genarteElbowPlot(file, start_cluster, end_cluster, max_iter)
-        data = save_clustering_data(file, init_method, k, n_iter, start_cluster, end_cluster, max_iter)
-        print(data)
+        figure_path = await figure
+        elbow_path = await elbow
+        
+        def_figure_path = os.path.join(settings.BASE_DIR, "static", figure_path)
+        def_elbow_path = os.path.join(settings.BASE_DIR, "static", elbow_path)
+        await generatePdf(result, name,  def_figure_path,  def_elbow_path, init_method, k, n_iter, start_cluster, end_cluster, max_iter)
+    
+        new_id = max_id+1
+        pdf_path = f"{new_id}_hasil_kmeans_{name}.pdf"
+
+        await save_clustering_data(name, pdf_path, init_method, k, n_iter, start_cluster, end_cluster, max_iter)
+        
         return render(
             request,
             "page/elbow_draw.html",
-            {"result": result, "figure": figure, "elbow": elbow},
+            {"result": result, "figure": figure_path, "elbow": elbow_path},
         )
+        

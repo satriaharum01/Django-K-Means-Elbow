@@ -1,41 +1,127 @@
-{% if error %}
-<div class="tile-title" style="color: red;">{{ error }}</div>
-{% endif %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="tile">
+            <h3 class="tile-title"><i>Clustering</i></h3>
+            {% if error %}
+            <div class="tile-title" style="color: red;">{{ error }}</div>
+            {% endif %}
 
-{% for row in result %}
-<button type="button" class="btn btn-primary pull-right btn-export-image"><i class="fa fa-file-image"></i>
-    Export</button>
-<button type="button" class="btn btn-danger mx-2 pull-right btn-print-Table"><i class="fa fa-file-pdf"></i>
-    Export</button>
-<button type="button" class="btn btn-success pull-right btn-export-excel"><i class="fa fa-file-excel"></i>
-    Export</button>
-<h3 class="tile-title">Iterasi {{ row.iteration }}: Hasil Cluster</h3>
-<table class="table table-hover table-bordered" width="100%" id="data-result-cluster">
-    <thead>
-        <tr>
-            <th class="text-center">Data</th>
-            <th class="text-center">Kluster</th>
-        </tr>
-    </thead>
-    <tbody class="text-center">
-        {% for dow in row.combined_data %}
-        <tr>
-            <td>{{ dow.No }}</td>
-            <td>{{ dow.clusters }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<hr>
+            <div class="tile-body">
+                {% for row in result %}
+                <button type="button" class="btn btn-primary pull-right btn-export-image"><i
+                        class="fa fa-file-image"></i>
+                    Export</button>
+                <button type="button" class="btn btn-danger mx-2 pull-right btn-print-Table"><i
+                        class="fa fa-file-pdf"></i>
+                    Export</button>
+                <button type="button" class="btn btn-success pull-right btn-export-excel"><i
+                        class="fa fa-file-excel"></i>
+                    Export</button>
+                <h3 class="tile-title">Iterasi {{ row.iteration }}: Hasil Cluster</h3>
+                <table class="display table table-striped table-hover" width="100%" id="data-result-cluster">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Data</th>
+                            <th class="text-center">Kluster</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for dow in row.combined_data %}
+                        <tr>
+                            <td>{{ dow.No }}</td>
+                            <td>{{ dow.clusters }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <hr>
 
-{% load static %}
-<h3 class="tile-title">Grafik Hasil Cluster</h3>
-<img src="{% static figure %}" alt="Figure" style="width:100%;">
-{% endfor %}
+                {% load static %}
+                <h3 class="tile-title">Grafik Hasil Cluster</h3>
+                <img src="{% static figure %}" id="figure_result" alt="Figure" style="width:100%;">
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var tableId = 'data-result-cluster';
+    function exportTableToExcel(tableId) {
+        // Get the table element using the provided ID
+        const table = document.getElementById(tableId);
+
+        // Extract the HTML content of the table
+        const html = table.outerHTML;
+
+        // Create a Blob containing the HTML data with Excel MIME type
+        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+
+        // Create a URL for the Blob
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary anchor element for downloading
+        const a = document.createElement("a");
+        a.href = url;
+
+        // Set the desired filename for the downloaded file
+        a.download = "Hasil Prediksi Sentimen.xls";
+
+        // Simulate a click on the anchor to trigger download
+        a.click();
+
+        // Release the URL object to free up resources
+        URL.revokeObjectURL(url);
+    }
+
+    function exportTableToImage() {
+        const table = document.getElementById('data-result-cluster');
+        // Use html2canvas to capture the table
+        html2canvas(table).then(canvas => {
+            // Convert canvas to image data
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/jpeg', 1.0); // Convert canvas to JPG
+            link.download = 'hasil_cluster.jpg'; // Set download filename
+            link.click(); // Trigger download
+        });
+    }
+
+    function exportTableToPrint(tableId) {
+        var tableContent = document.getElementById(tableId).outerHTML; // Get the table HTML
+        var printWindow = window.open('', '_blank'); // Open a new window
+        printWindow.document.open();
+        printWindow.document.write(`
+                      <html>
+                          <head>
+                              <title>Print Table</title>
+                              <style>
+                                  table {
+                                      border-collapse: collapse;
+                                      width: 100%;
+                                  }
+                                  table, th, td {
+                                      border: 1px solid black;
+                                  }
+                                  th, td {
+                                      padding: 8px;
+                                      text-align: left;
+                                  }
+                              </style>
+                          </head>
+                          <body>
+                              ${tableContent} <!-- Add table content -->
+                          </body>
+                      </html>
+                  `);
+        printWindow.document.close();
+        printWindow.print(); // Trigger print dialog
+    }
+</script>
 <script>
     //Excel Table
     $('.btn-export-excel').on('click', function () {
-        exportTableToExcel('data-result-cluster');
+        exportTableToExcel(tableId);
     })
     // Print table on button click
     $('.btn-print-Table').on('click', function () {
@@ -43,6 +129,6 @@
     });
     // Export table to JPG
     $('.btn-export-image').on('click', function () {
-        exportTableToImage('data-result-cluster');
+        exportTableToImage();
     });
 </script>

@@ -2,10 +2,8 @@ from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
-    path('pengguna/', views.index, name='pengguna'),
-    path('pengguna/save', views.create, name='pengguna/save'),
-    path('pengguna/update/<int:data_id>', views.update, name="pengguna/update"),
-    path('pengguna/delete/<int:data_id>', views.delete, name="pengguna/delete"),
-    path('pengguna/json', views.json, name="pengguna/json"),
-    path('pengguna/find/<int:data_id>', views.find, name="pengguna/find"),
+    path('arsip/', views.index, name='arsip'),
+    path('arsip/delete/<int:data_id>', views.delete, name="arsip/delete"),
+    path('arsip/json', views.json, name="arsip/json"),
+    path('arsip/download/<int:file_id>', views.download_file, name='download_file'),
 ]

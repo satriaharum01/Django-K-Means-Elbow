@@ -2,10 +2,10 @@ from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
-    path('arsip/', views.index, name='arsip'),
-    path('arsip/save', views.create, name='arsip/save'),
-    path('arsip/update/<int:data_id>', views.update, name="arsip/update"),
-    path('arsip/delete/<int:data_id>', views.delete, name="arsip/delete"),
-    path('arsip/json', views.json, name="arsip/json"),
-    path('arsip/find/<int:data_id>', views.find, name="arsip/find"),
+    path('pengguna/', views.index, name='pengguna'),
+    path('pengguna/save', views.create, name='pengguna/save'),
+    path('pengguna/update/<int:data_id>', views.update, name="pengguna/update"),
+    path('pengguna/delete/<int:data_id>', views.delete, name="pengguna/delete"),
+    path('pengguna/json', views.json, name="pengguna/json"),
+    path('pengguna/find/<int:data_id>', views.find, name="pengguna/find"),
 ]
