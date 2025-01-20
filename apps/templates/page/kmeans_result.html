@@ -7,7 +7,6 @@
             {% endif %}
 
             <div class="tile-body">
-                {% for row in result %}
                 <button type="button" class="btn btn-primary pull-right btn-export-image"><i
                         class="fa fa-file-image"></i>
                     Export</button>
@@ -18,7 +17,10 @@
                         class="fa fa-file-excel"></i>
                     Export</button>
                 <h3 class="tile-title">Iterasi {{ row.iteration }}: Hasil Cluster</h3>
-                <table class="display table table-striped table-hover" width="100%" id="data-result-cluster">
+                <div id="data-result-cluster">
+                {% for i, y in KlusterLabels %}
+                <h5>C{{i}}: {{y}}</h5>
+                <table class="display table table-striped table-hover" width="100%" >
                     <thead>
                         <tr>
                             <th class="text-center">Data</th>
@@ -26,20 +28,26 @@
                         </tr>
                     </thead>
                     <tbody class="text-center">
-                        {% for dow in row.combined_data %}
+                        {% for dow in result %}
+                        {% if dow.clusters == i %}
                         <tr>
                             <td>{{ dow.No }}</td>
                             <td>{{ dow.clusters }}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
+                {% endfor %}
+                </div>
                 <hr>
 
                 {% load static %}
                 <h3 class="tile-title">Grafik Hasil Cluster</h3>
+                <div class="tile-body">
+                </div>
                 <img src="{% static figure %}" id="figure_result" alt="Figure" style="width:100%;">
-                {% endfor %}
+
 
             </div>
         </div>

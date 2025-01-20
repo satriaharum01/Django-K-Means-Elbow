@@ -442,6 +442,13 @@ async def clustering_view(request):
         # Tambahkan hasil akhir ke DataFrame
         df["Kluster"] = clusters
         result.append(step_data)
+        
+        combined_data = result[0]["combined_data"]
+        df = pd.DataFrame(combined_data)
+        sorted_df = df.sort_values(by=["clusters"]).to_dict(orient="records")
+
+        Kluster = [1,2,3,4]
+        labels = ["Rendah","Unggul","Baik","Cukup Baik"]
         df["Euclidean Distance"] = [distances[i, clusters[i]] for i in range(len(X))]
         figure = generateKmeansFigur(X, (clusters).tolist(), centroids)
         figure_path = await figure
@@ -454,10 +461,21 @@ async def clustering_view(request):
         #    print("Euclidean Distances:", step['euclidean_distances'])
         #    print("Euclidean Distances:", step['combined_data'])
         # Kirim data langkah-langkah ke template
+        
+        KlusterLabels = zip(Kluster, labels)
         return render(
-            request, "page/kmeans_result.html", {"result": result, "figure": figure_path}
+            request, "page/kmeans_result.html", {"KlusterLabels":KlusterLabels,"result": sorted_df, "figure": figure_path}
         )
 
+def label_cluster(cluster):
+    if cluster == 0:
+        return 'Rendah'
+    elif cluster == 1:
+        return 'Unggul'
+    elif cluster == 2:
+        return 'Baik'
+    elif cluster == 3:
+        return 'Cukup Baik'
 
 async def generateKmeansFigur(X, labels, centroids):
 
